@@ -17,3 +17,5 @@ docker-compose.server.yml
 
 # Dev env configuration
 proxy.js
+
+.idea

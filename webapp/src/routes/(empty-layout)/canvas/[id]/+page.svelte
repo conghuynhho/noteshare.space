@@ -1,0 +1,101 @@
+<script lang="ts">
+	import { onMount } from 'svelte';
+	import { decrypt } from '$lib/crypto/decrypt';
+	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
+	import LogoMarkdown from 'svelte-icons/io/IoLogoMarkdown.svelte';
+	import IconEncrypted from 'svelte-icons/md/MdLockOutline.svelte';
+	import { browser } from '$app/environment';
+	import RawRenderer from '$lib/components/RawRenderer.svelte';
+	import LogoDocument from 'svelte-icons/md/MdUndo.svelte';
+	import Dismissable from '$lib/components/Dismissable.svelte';
+	import type { PageData } from './$types';
+	import Canvas from "$lib/components/canvas/Canvas.svelte";
+	import {goto} from '$app/navigation'
+
+	export let data: PageData;
+	let { note } = data;
+
+	let plaintext: string;
+	let timeString: string;
+	let decryptFailed = false;
+	let showRaw = false;
+	let fileTitle: string | undefined;
+
+	export enum NoteType {
+		'md' = 1,
+		'canvas' = 2
+	}
+
+	function toggleRaw() {
+		showRaw = !showRaw;
+	}
+
+	function msToString(ms: number): string {
+		const minutes = ms / 1000 / 60;
+		if (minutes < 60) {
+			return `${Math.floor(minutes)} minute${minutes >= 2 ? 's' : ''}`;
+		}
+		const hours = minutes / 60;
+		if (hours < 24) {
+			return `${Math.floor(hours)} hour${hours >= 2 ? 's' : ''}`;
+		}
+		const days = hours / 24;
+		if (days < 30.42) {
+			return `${Math.floor(days)} day${days >= 2 ? 's' : ''}`;
+		}
+		const months = days / 30.42;
+		return `${Math.floor(months)} month${months >= 2 ? 's' : ''}`;
+	}
+
+	function parsePayload(payload: string): { body: string; title?: string } {
+		try {
+			const parsed = JSON.parse(payload);
+			return { body: parsed?.body, title: parsed?.title };
+		} catch (e) {
+			return { body: payload, title: undefined };
+		}
+	}
+
+	onMount(() => {
+		const key = location.hash.slice(1);
+		if (browser && note) {
+			decrypt({ ...note, key }, note.crypto_version)
+				.then((value) => {
+					const { body, title } = parsePayload(value);
+					plaintext = body;
+					fileTitle = title;
+				})
+				.catch(() => (decryptFailed = true));
+		}
+
+		if(note.note_type === NoteType.md) {
+			goto(`/note/${note.id}#${key}`)
+		}
+	});
+
+	$: if (note?.insert_time) {
+		const diff_ms = new Date().valueOf() - new Date(note.insert_time).valueOf();
+		timeString = msToString(diff_ms);
+	}
+</script>
+
+<svelte:head>
+	<title>{import.meta.env.VITE_BRANDING} | Shared note</title>
+	{#if decryptFailed}
+		<title>{import.meta.env.VITE_BRANDING} | Error decrypting note</title>
+	{/if}
+</svelte:head>
+
+{#if plaintext}
+	<Canvas />
+{/if}
+
+{#if decryptFailed}
+	<div class="prose max-w-2xl prose-zinc dark:prose-invert">
+		<h1>Error: Cannot decrypt file 🔒</h1>
+		<p class="prose-xl">This note could not be decrypted with this link.</p>
+		<p class="prose-xl">
+			If you think this is an error, please double check that you copied the entire URL.
+		</p>
+	</div>
+{/if}

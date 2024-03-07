@@ -9,6 +9,9 @@
 	import LogoDocument from 'svelte-icons/md/MdUndo.svelte';
 	import Dismissable from '$lib/components/Dismissable.svelte';
 	import type { PageData } from './$types';
+	import Canvas from "$lib/components/canvas/Canvas.svelte";
+	import {goto} from "$app/navigation";
+	import {page} from "$app/stores";
 
 	export let data: PageData;
 	let { note } = data;
@@ -18,6 +21,11 @@
 	let decryptFailed = false;
 	let showRaw = false;
 	let fileTitle: string | undefined;
+
+	export enum NoteType {
+		'md' = 1,
+		'canvas' = 2
+	}
 
 	function toggleRaw() {
 		showRaw = !showRaw;
@@ -50,8 +58,8 @@
 	}
 
 	onMount(() => {
+		const key = location.hash.slice(1);
 		if (browser && note) {
-			const key = location.hash.slice(1);
 			decrypt({ ...note, key }, note.crypto_version)
 				.then((value) => {
 					const { body, title } = parsePayload(value);
@@ -59,6 +67,10 @@
 					fileTitle = title;
 				})
 				.catch(() => (decryptFailed = true));
+		}
+
+		if(note.note_type === NoteType.canvas) {
+			goto(`/canvas/${note.id}#${key}`)
 		}
 	});
 
@@ -76,35 +88,40 @@
 </svelte:head>
 
 {#if plaintext}
-	<div class="max-w-2xl mx-auto">
-		<Dismissable />
 
-		<p
-			class="mb-4 text-sm flex gap-2 flex-col md:gap-0 md:flex-row justify-between text-zinc-500 dark:text-zinc-400"
-		>
+	{#if note.note_type === NoteType.canvas}
+		<Canvas />
+	{:else}
+		<div class="max-w-2xl mx-auto">
+			<Dismissable />
+
+			<p
+					class="mb-4 text-sm flex gap-2 flex-col md:gap-0 md:flex-row justify-between text-zinc-500 dark:text-zinc-400"
+			>
 			<span class="flex gap-1.5 items-center uppercase">
 				<span class="inline-block w-5 h-5"><IconEncrypted /></span>
 				<span>e2e encrypted | <span>Shared {timeString} ago</span></span>
 			</span>
-			<button
-				on:click={toggleRaw}
-				class="flex flex-row-reverse justify-end md:flex-row underline md:no-underline gap-1.5 uppercase items-center hover:underline"
-			>
-				{#if showRaw}
-					<span class="w-6 h-6 inline-block"><LogoDocument /> </span>
-					<span>Render Document</span>
-				{:else}
-					<span>Raw Markdown</span>
-					<span class="w-6 h-6 inline-block"><LogoMarkdown /> </span>
-				{/if}
-			</button>
-		</p>
-		{#if showRaw}
-			<RawRenderer>{plaintext}</RawRenderer>
-		{:else}
-			<MarkdownRenderer {plaintext} {fileTitle} />
-		{/if}
-	</div>
+				<button
+						on:click={toggleRaw}
+						class="flex flex-row-reverse justify-end md:flex-row underline md:no-underline gap-1.5 uppercase items-center hover:underline"
+				>
+					{#if showRaw}
+						<span class="w-6 h-6 inline-block"><LogoDocument /> </span>
+						<span>Render Document</span>
+					{:else}
+						<span>Raw Markdown</span>
+						<span class="w-6 h-6 inline-block"><LogoMarkdown /> </span>
+					{/if}
+				</button>
+			</p>
+			{#if showRaw}
+				<RawRenderer>{plaintext}</RawRenderer>
+			{:else}
+				<MarkdownRenderer {plaintext} {fileTitle} />
+			{/if}
+		</div>
+	{/if }
 {/if}
 
 {#if decryptFailed}

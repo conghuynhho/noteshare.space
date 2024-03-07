@@ -31,6 +31,10 @@ export class NotePostRequest extends NoteRequestBody {
 
   @Matches("^v[0-9]+$")
   crypto_version: string = "v1";
+
+  // note_type value is 1 or 2 only
+  @IsNotEmpty()
+  note_type: number | undefined;
 }
 
 export class NoteDeleteRequest extends NoteRequestBody {

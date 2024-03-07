@@ -12,6 +12,11 @@ import checkId from "../../lib/checkUserId";
  * Request body for creating a note
  */
 
+export enum NoteType {
+  'md' = 1,
+  'canvas' = 2
+}
+
 export async function postNoteController(
   req: Request,
   res: Response,
@@ -57,6 +62,7 @@ export async function postNoteController(
     expire_time: addDays(new Date(), EXPIRE_WINDOW_DAYS),
     crypto_version: notePostRequest.crypto_version,
     secret_token: secret_token,
+    note_type: notePostRequest.note_type
   } as EncryptedNote;
 
   // Store note object
@@ -66,9 +72,10 @@ export async function postNoteController(
       event.note_id = savedNote.id;
       event.size_bytes = getNoteSize(note);
       event.expire_window_days = EXPIRE_WINDOW_DAYS;
+      const prefixUrl = note.note_type === NoteType.canvas ? 'canvas' : 'note';
       await EventLogger.writeEvent(event);
       res.json({
-        view_url: `${process.env.FRONTEND_URL}/note/${savedNote.id}`,
+        view_url: `${process.env.FRONTEND_URL}/${prefixUrl}/${savedNote.id}`,
         expire_time: savedNote.expire_time,
         secret_token: savedNote.secret_token,
         note_id: savedNote.id,

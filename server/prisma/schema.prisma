@@ -19,6 +19,7 @@ model EncryptedNote {
   iv             String?
   crypto_version String   @default("v1")
   secret_token   String?
+  note_type       Int?     // New column added to indicate note type (1: markdown, 2: canvas)
 }
 
 model event {

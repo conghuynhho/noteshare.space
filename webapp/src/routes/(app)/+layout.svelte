@@ -6,7 +6,7 @@
 	import NavBarLink from '$lib/components/navbar/NavBarLink.svelte';
 	import ThemeToggle from '$lib/components/navbar/ThemeToggle.svelte';
 	import LogoGithub from 'svelte-icons/io/IoLogoGithub.svelte';
-	import '../app.css';
+	import '../../app.css';
 
 	let dark: boolean;
 	let darkTheme = 'dark';
